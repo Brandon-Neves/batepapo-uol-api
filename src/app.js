@@ -101,7 +101,8 @@ app.get('/messages', async (req, res) => {
   const { user } = req.headers
   const limit = req.query.limit
 
-  if (parseInt(limit) <= 0 || isNaN(limit)) return res.sendStatus(422)
+  if (parseInt(limit) <= 0 || (isNaN(limit) && limit))
+    return res.sendStatus(422)
 
   try {
     const messages = await db
@@ -118,6 +119,25 @@ app.get('/messages', async (req, res) => {
     res.send(messages)
   } catch (err) {
     res.sendStatus(500)
+  }
+})
+
+app.post('/status', async (req, res) => {
+  const { user } = req.headers
+
+  if (!user) return res.sendStatus(404)
+
+  try {
+    const userExist = await db
+      .collection('participants')
+      .findOne({ name: user })
+    if (!userExist) return res.sendStatus(404)
+    await db
+      .collection('participants')
+      .updateOne({ name: user }, { $set: { lastStatus: Date.now() } })
+    res.sendStatus(200)
+  } catch (err) {
+    res.status(500)
   }
 })
 
