@@ -27,7 +27,6 @@ app.use(express.json())
 app.post('/participants', async (req, res) => {
   const { name } = req.body
   const { error } = usersSchema.validate({ name })
-  console.log(error)
   if (error) return res.sendStatus(422)
 
   try {
@@ -77,14 +76,13 @@ app.post('/messages', async (req, res) => {
     { to, text, type, from: user },
     { abortEarly: false }
   )
-  console.log(to, text, type, user)
   if (error) return res.sendStatus(422)
 
   try {
     const fromExist = await db
       .collection('participants')
       .findOne({ name: user })
-    if (!fromExist) return res.status(422)
+    if (!fromExist) return res.sendStatus(422)
 
     await db.collection('messages').insertOne({
       from: user,
