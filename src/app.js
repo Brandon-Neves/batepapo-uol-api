@@ -98,8 +98,27 @@ app.post('/messages', async (req, res) => {
 })
 
 app.get('/messages', async (req, res) => {
-  const messages = await db.collection('messages').find().toArray()
-  res.send(messages)
+  const { user } = req.headers
+  const limit = req.query.limit
+
+  if (parseInt(limit) <= 0 || isNaN(limit)) return res.sendStatus(422)
+
+  try {
+    const messages = await db
+      .collection('messages')
+      .find({
+        $or: [
+          { from: user },
+          { to: { $in: [user, 'Todos'] } },
+          { type: 'message' }
+        ]
+      })
+      .limit(Number(limit))
+      .toArray()
+    res.send(messages)
+  } catch (err) {
+    res.sendStatus(500)
+  }
 })
 
 const PORT = 5000
