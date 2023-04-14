@@ -27,19 +27,18 @@ app.use(express.json())
 app.post('/participants', async (req, res) => {
   const { name } = req.body
   const { error } = usersSchema.validate({ name })
-  if (error) return res.status(422).send('Insira um usuário válido')
+  if (error) return res.status(422)
 
   try {
     const userExist = await db.collection('participants').findOne({ name })
-    if (userExist)
-      return res.status(409).send('Usuário em uso, escolha outro username')
+    if (userExist) return res.status(409)
 
     await db
       .collection('participants')
       .insertOne({ name, lastStatus: Date.now() })
 
     await db.collection('messages').insertOne({
-      from: { name },
+      from: name,
       to: 'Todos',
       text: 'entra na sala...',
       type: 'status',
@@ -59,7 +58,7 @@ app.get('/participants', async (req, res) => {
     }
     res.send(queryUsers)
   } catch (err) {
-    res.status(500).send(err.message)
+    res.status(500)
   }
 })
 
@@ -72,7 +71,6 @@ const messageSchema = joi.object({
 app.post('/messages', async (req, res) => {
   const { to, text, type } = req.body
   const { user } = req.headers
-  console.log(user)
   const { error } = messageSchema.validate({ to, text, type })
   if (error) return res.status(422)
 
@@ -82,7 +80,7 @@ app.post('/messages', async (req, res) => {
       .findOne({ name: user })
     if (!fromExist) return res.status(422)
     await db.collection('messages').insertOne({
-      from: user,
+      from: fromExist.name,
       to,
       text,
       type,
