@@ -27,11 +27,12 @@ app.use(express.json())
 app.post('/participants', async (req, res) => {
   const { name } = req.body
   const { error } = usersSchema.validate({ name })
-  if (error) return res.status(422)
+  console.log(error)
+  if (error) return res.sendStatus(422)
 
   try {
     const userExist = await db.collection('participants').findOne({ name })
-    if (userExist) return res.status(409)
+    if (userExist) return res.sendStatus(409)
 
     await db
       .collection('participants')
@@ -44,9 +45,9 @@ app.post('/participants', async (req, res) => {
       type: 'status',
       time: dayjs().format('HH:mm:ss')
     })
-    res.status(201)
+    res.sendStatus(201)
   } catch (err) {
-    res.status(500)
+    res.sendStatus(500)
   }
 })
 
@@ -54,15 +55,16 @@ app.get('/participants', async (req, res) => {
   try {
     const queryUsers = await db.collection('participants').find().toArray()
     if (!queryUsers) {
-      return res.send([])
+      return res.sendStatus([])
     }
     res.send(queryUsers)
   } catch (err) {
-    res.status(500)
+    res.sendStatus(500)
   }
 })
 
 const messageSchema = joi.object({
+  from: joi.string().required(),
   to: joi.string().required().min(3),
   text: joi.string().required().min(1),
   type: joi.string().required().valid('message', 'private_message')
@@ -71,24 +73,29 @@ const messageSchema = joi.object({
 app.post('/messages', async (req, res) => {
   const { to, text, type } = req.body
   const { user } = req.headers
-  const { error } = messageSchema.validate({ to, text, type })
-  if (error) return res.status(422)
+  const { error, value } = messageSchema.validate(
+    { to, text, type, from: user },
+    { abortEarly: false }
+  )
+  console.log(to, text, type, user)
+  if (error) return res.sendStatus(422)
 
   try {
     const fromExist = await db
       .collection('participants')
       .findOne({ name: user })
     if (!fromExist) return res.status(422)
+
     await db.collection('messages').insertOne({
-      from: fromExist.name,
-      to,
-      text,
-      type,
+      from: user,
+      to: value.to,
+      text: value.text,
+      type: value.type,
       time: dayjs().format('HH:mm:ss')
     })
-    res.status(201)
+    res.sendStatus(201)
   } catch (err) {
-    res.status(500)
+    res.sendStatus(500)
   }
 })
 
