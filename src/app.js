@@ -141,6 +141,34 @@ app.post('/status', async (req, res) => {
   }
 })
 
+setInterval(async () => {
+  const seconds = Date.now() - 10000
+
+  try {
+    const participants = await db
+      .collection('participants')
+      .find({ lastStatus: { $lte: seconds } })
+      .toArray()
+    if (participants.length > 0) {
+      const newMessages = participants.map(p => {
+        return {
+          from: p.name,
+          to: 'Todos',
+          text: 'sai da sala...',
+          type: 'status',
+          time: dayjs().format('HH:ss:mm')
+        }
+      })
+      await db.collection('messages').insertMany(newMessages)
+      await db
+        .collection('participants')
+        .deleteMany({ lastStatus: { $lte: seconds } })
+    }
+  } catch (err) {
+    console.log(err)
+  }
+}, 15000)
+
 const PORT = 5000
 
 app.listen(PORT, () => console.log('Servidor funcionando'))
